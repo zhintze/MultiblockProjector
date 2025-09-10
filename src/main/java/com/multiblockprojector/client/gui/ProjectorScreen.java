@@ -28,21 +28,29 @@ public class ProjectorScreen extends Screen {
     private static final int ENTRIES_PER_PAGE = 8;
     private static final int ENTRY_HEIGHT = 20;
     
+    private SimpleMultiblockPreviewRenderer previewRenderer;
+    private IUniversalMultiblock selectedMultiblock;
+    private boolean isDragging = false;
+    private double lastMouseX, lastMouseY;
+    
     public ProjectorScreen(ItemStack projectorStack, InteractionHand hand) {
         super(Component.translatable("gui.multiblockprojector.projector"));
         this.projectorStack = projectorStack;
         this.hand = hand;
         this.settings = ProjectorItem.getSettings(projectorStack);
         this.availableMultiblocks = UniversalMultiblockHandler.getMultiblocks();
+        this.previewRenderer = new SimpleMultiblockPreviewRenderer();
     }
     
     @Override
     protected void init() {
         super.init();
         
-        int startY = (this.height - (ENTRIES_PER_PAGE * ENTRY_HEIGHT)) / 2;
+        // Calculate layout areas
+        int leftPanelWidth = this.width / 3;
+        int startY = 50;
         
-        // Create buttons for each visible multiblock
+        // Create buttons for each visible multiblock in left panel
         for (int i = 0; i < Math.min(ENTRIES_PER_PAGE, availableMultiblocks.size() - scrollOffset); i++) {
             int index = scrollOffset + i;
             if (index >= availableMultiblocks.size()) break;
@@ -51,9 +59,9 @@ public class ProjectorScreen extends Screen {
             
             Button button = Button.builder(
                 multiblock.getDisplayName(),
-                (btn) -> selectMultiblock(multiblock)
+                (btn) -> selectMultiblockForPreview(multiblock)
             )
-            .bounds(this.width / 2 - 100, startY + i * ENTRY_HEIGHT, 200, 18)
+            .bounds(10, startY + i * ENTRY_HEIGHT, leftPanelWidth - 30, 18)
             .build();
             
             this.addRenderableWidget(button);
@@ -67,7 +75,7 @@ public class ProjectorScreen extends Screen {
                     scrollOffset = Math.max(0, scrollOffset - 1);
                     rebuildWidgets();
                 }
-            ).bounds(this.width / 2 + 105, startY, 20, 18).build());
+            ).bounds(leftPanelWidth - 25, startY, 20, 18).build());
         }
         
         if (scrollOffset + ENTRIES_PER_PAGE < availableMultiblocks.size()) {
@@ -77,17 +85,33 @@ public class ProjectorScreen extends Screen {
                     scrollOffset = Math.min(availableMultiblocks.size() - ENTRIES_PER_PAGE, scrollOffset + 1);
                     rebuildWidgets();
                 }
-            ).bounds(this.width / 2 + 105, startY + (ENTRIES_PER_PAGE - 1) * ENTRY_HEIGHT, 20, 18).build());
+            ).bounds(leftPanelWidth - 25, startY + (ENTRIES_PER_PAGE - 1) * ENTRY_HEIGHT, 20, 18).build());
         }
         
-        // Add close button
+        // Add control buttons at bottom
+        int buttonY = startY + ENTRIES_PER_PAGE * ENTRY_HEIGHT + 20;
+        
+        // Select button
+        this.addRenderableWidget(Button.builder(
+            Component.translatable("gui.multiblockprojector.select"),
+            (btn) -> selectMultiblock(selectedMultiblock)
+        ).bounds(10, buttonY, leftPanelWidth / 2 - 15, 20).build());
+        
+        // Close button
         this.addRenderableWidget(Button.builder(
             Component.translatable("gui.done"),
             (btn) -> this.minecraft.setScreen(null)
-        ).bounds(this.width / 2 - 50, startY + ENTRIES_PER_PAGE * ENTRY_HEIGHT + 10, 100, 20).build());
+        ).bounds(leftPanelWidth / 2 + 5, buttonY, leftPanelWidth / 2 - 15, 20).build());
+    }
+    
+    private void selectMultiblockForPreview(IUniversalMultiblock multiblock) {
+        this.selectedMultiblock = multiblock;
+        this.previewRenderer.setMultiblock(multiblock);
     }
     
     private void selectMultiblock(IUniversalMultiblock multiblock) {
+        if (multiblock == null) return;
+        
         settings.setMultiblock(multiblock);
         settings.setMode(Settings.Mode.PROJECTION);
         settings.applyTo(projectorStack);
@@ -111,18 +135,43 @@ public class ProjectorScreen extends Screen {
     public void render(@Nonnull GuiGraphics guiGraphics, int mouseX, int mouseY, float partialTick) {
         this.renderBackground(guiGraphics, mouseX, mouseY, partialTick);
         
+        int leftPanelWidth = this.width / 3;
+        
+        // Draw left panel background
+        guiGraphics.fill(0, 0, leftPanelWidth, this.height, 0x80000000);
+        
         // Draw title
-        guiGraphics.drawCenteredString(this.font, this.title, this.width / 2, 20, 0xFFFFFF);
+        guiGraphics.drawCenteredString(this.font, this.title, leftPanelWidth / 2, 20, 0xFFFFFF);
         
         // Draw instructions
         Component instruction = Component.translatable("gui.multiblockprojector.select_multiblock");
-        guiGraphics.drawCenteredString(this.font, instruction, this.width / 2, 35, 0xAAAAAA);
+        guiGraphics.drawCenteredString(this.font, instruction, leftPanelWidth / 2, 35, 0xAAAAAA);
         
         super.render(guiGraphics, mouseX, mouseY, partialTick);
         
-        // Draw multiblock info on hover
-        if (mouseX >= this.width / 2 - 100 && mouseX <= this.width / 2 + 100) {
-            int startY = (this.height - (ENTRIES_PER_PAGE * ENTRY_HEIGHT)) / 2;
+        // Draw vertical separator
+        guiGraphics.fill(leftPanelWidth, 0, leftPanelWidth + 2, this.height, 0xFF555555);
+        
+        // Render preview in right panel
+        int previewX = leftPanelWidth + 10;
+        int previewY = 50;
+        int previewWidth = (int)((this.width - leftPanelWidth - 20) * 0.67);
+        int previewHeight = this.height / 2;
+        
+        // Center the preview in the remaining space
+        previewX = leftPanelWidth + (this.width - leftPanelWidth - previewWidth) / 2;
+        previewY = (this.height - previewHeight) / 2;
+        
+        // Draw preview background
+        guiGraphics.fill(previewX - 2, previewY - 2, previewX + previewWidth + 2, previewY + previewHeight + 2, 0xFF333333);
+        guiGraphics.fill(previewX, previewY, previewX + previewWidth, previewY + previewHeight, 0xFF111111);
+        
+        // Render the multiblock preview
+        previewRenderer.render(guiGraphics, previewX, previewY, previewWidth, previewHeight, mouseX, mouseY, partialTick);
+        
+        // Draw multiblock info on hover in left panel
+        if (mouseX >= 10 && mouseX <= leftPanelWidth - 30) {
+            int startY = 50;
             int hoveredIndex = (mouseY - startY) / ENTRY_HEIGHT;
             
             if (hoveredIndex >= 0 && hoveredIndex < ENTRIES_PER_PAGE) {
@@ -164,24 +213,61 @@ public class ProjectorScreen extends Screen {
     
     @Override
     public boolean mouseScrolled(double mouseX, double mouseY, double scrollX, double scrollY) {
-        if (availableMultiblocks.size() <= ENTRIES_PER_PAGE) {
-            return super.mouseScrolled(mouseX, mouseY, scrollX, scrollY);
-        }
+        int leftPanelWidth = this.width / 3;
         
-        int oldScrollOffset = scrollOffset;
-        if (scrollY > 0) {
-            // Scroll up
-            scrollOffset = Math.max(0, scrollOffset - 1);
-        } else if (scrollY < 0) {
-            // Scroll down
-            scrollOffset = Math.min(availableMultiblocks.size() - ENTRIES_PER_PAGE, scrollOffset + 1);
-        }
-        
-        if (scrollOffset != oldScrollOffset) {
-            rebuildWidgets();
-            return true;
+        // Handle scrolling in left panel
+        if (mouseX < leftPanelWidth && availableMultiblocks.size() > ENTRIES_PER_PAGE) {
+            int oldScrollOffset = scrollOffset;
+            if (scrollY > 0) {
+                // Scroll up
+                scrollOffset = Math.max(0, scrollOffset - 1);
+            } else if (scrollY < 0) {
+                // Scroll down
+                scrollOffset = Math.min(availableMultiblocks.size() - ENTRIES_PER_PAGE, scrollOffset + 1);
+            }
+            
+            if (scrollOffset != oldScrollOffset) {
+                rebuildWidgets();
+                return true;
+            }
         }
         
         return super.mouseScrolled(mouseX, mouseY, scrollX, scrollY);
+    }
+    
+    @Override
+    public boolean mouseDragged(double mouseX, double mouseY, int button, double deltaX, double deltaY) {
+        int leftPanelWidth = this.width / 3;
+        
+        // Handle dragging in preview area for rotation
+        if (mouseX > leftPanelWidth && isDragging) {
+            previewRenderer.onMouseDragged(mouseX, mouseY, deltaX, deltaY);
+            return true;
+        }
+        
+        return super.mouseDragged(mouseX, mouseY, button, deltaX, deltaY);
+    }
+    
+    @Override
+    public boolean mouseClicked(double mouseX, double mouseY, int button) {
+        int leftPanelWidth = this.width / 3;
+        
+        // Start dragging in preview area
+        if (mouseX > leftPanelWidth && button == 0) {
+            isDragging = true;
+            lastMouseX = mouseX;
+            lastMouseY = mouseY;
+            return true;
+        }
+        
+        return super.mouseClicked(mouseX, mouseY, button);
+    }
+    
+    @Override
+    public boolean mouseReleased(double mouseX, double mouseY, int button) {
+        if (button == 0) {
+            isDragging = false;
+        }
+        return super.mouseReleased(mouseX, mouseY, button);
     }
 }

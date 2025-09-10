@@ -87,6 +87,13 @@ repositories {
             includeGroup 'blusunrize.immersiveengineering'
         }
     }
+    maven {
+        name = 'CurseMaven'
+        url = 'https://cursemaven.com'
+        content {
+            includeGroup 'curse.maven'
+        }
+    }
     flatDir {
         dirs "libs"
     }
@@ -103,6 +110,12 @@ dependencies {
     implementation files('libs/MekanismAdditions-1.21.1-10.7.14.homebaked.jar')
     implementation files('libs/MekanismGenerators-1.21.1-10.7.14.homebaked.jar')
     implementation files('libs/MekanismTools-1.21.1-10.7.14.homebaked.jar')
+
+
+    // Create - using compileOnly to avoid build issues when JARs are not available
+    // Add Create JAR files to libs folder if you want to include Create support
+    compileOnly fileTree(dir: 'libs', include: '*create*.jar')
+    compileOnly fileTree(dir: 'libs', include: '*Create*.jar')
 
     // Missing dependencies commented out for now
     //implementation "curse.maven:VicsPointBlank-961053:6028992"

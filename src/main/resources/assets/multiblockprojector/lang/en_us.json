@@ -35,6 +35,7 @@
   "gui.multiblockprojector.projector.search": "Search multiblocks...",
   "gui.multiblockprojector.projector": "Multiblock Projector",
   "gui.multiblockprojector.select_multiblock": "Select a multiblock structure:",
+  "gui.multiblockprojector.select": "Select",
   "gui.multiblockprojector.selected": "Selected: %s",
   "gui.multiblockprojector.tooltip": "Mod: %s",
   "gui.multiblockprojector.projection_created": "Projection created: %s",
