@@ -4,6 +4,7 @@ import com.multiblockprojector.common.UPContent;
 import com.multiblockprojector.common.projector.Settings;
 import com.multiblockprojector.common.projector.MultiblockProjection;
 import net.minecraft.ChatFormatting;
+import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.InteractionHand;
@@ -13,6 +14,7 @@ import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.TooltipFlag;
+import net.minecraft.world.item.Item.TooltipContext;
 import net.minecraft.world.item.context.UseOnContext;
 import net.minecraft.world.level.Level;
 
@@ -38,34 +40,55 @@ public class ProjectorItem extends Item {
         String selfKey = getDescriptionId(stack);
         if (stack.has(net.minecraft.core.component.DataComponents.CUSTOM_DATA)) {
             Settings settings = getSettings(stack);
-            if (settings.getMultiblock() != null) {
-                Component name = settings.getMultiblock().getDisplayName();
-                return Component.translatable(selfKey + ".specific", name).withStyle(ChatFormatting.GOLD);
+            Settings.Mode mode = settings.getMode();
+            
+            switch (mode) {
+                case NOTHING_SELECTED:
+                    return Component.translatable(selfKey).withStyle(ChatFormatting.GOLD);
+                case MULTIBLOCK_SELECTION:
+                    return Component.translatable(selfKey + ".selecting").withStyle(ChatFormatting.GOLD);
+                case PROJECTION:
+                    return Component.translatable(selfKey + ".projection_mode").withStyle(ChatFormatting.AQUA);
+                case BUILDING:
+                    return Component.translatable(selfKey + ".building_mode").withStyle(ChatFormatting.DARK_PURPLE);
+                default:
+                    return Component.translatable(selfKey).withStyle(ChatFormatting.GOLD);
             }
         }
         return Component.translatable(selfKey).withStyle(ChatFormatting.GOLD);
     }
     
-    public void appendHoverText(@Nonnull ItemStack stack, @Nullable Level worldIn, @Nonnull List<Component> tooltip, @Nonnull TooltipFlag flagIn) {
+    public void appendHoverText(@Nonnull ItemStack stack, TooltipContext ctx, @Nonnull List<Component> tooltip, @Nonnull TooltipFlag flagIn) {
         Settings settings = getSettings(stack);
         if (settings.getMultiblock() != null) {
             tooltip.add(Component.translatable("desc.multiblockprojector.info.projector.build0"));
-            tooltip.add(Component.translatable("desc.multiblockprojector.info.projector.build1", settings.getMultiblock().getDisplayName()));
-            
-            // Add mod information
-            tooltip.add(Component.translatable("desc.multiblockprojector.info.projector.mod", settings.getMultiblock().getModId())
-                .withStyle(ChatFormatting.GRAY));
         } else {
-            tooltip.add(Component.literal("Right-click to select a multiblock structure")
+            tooltip.add(Component.literal("Creates Projections of multiblock structures")
                 .withStyle(ChatFormatting.AQUA));
         }
         
-        // Add simple usage instructions for new users
-        tooltip.add(Component.literal("How to use:").withStyle(ChatFormatting.YELLOW));
-        tooltip.add(Component.literal("1. Right-click to select structure").withStyle(ChatFormatting.GRAY));
-        tooltip.add(Component.literal("2. Left-click to place projection").withStyle(ChatFormatting.GRAY));
-        tooltip.add(Component.literal("3. Build blocks to match projection").withStyle(ChatFormatting.GRAY));
-        tooltip.add(Component.literal("4. Right-click to rotate while aiming").withStyle(ChatFormatting.GRAY));
+        // Show instructions based on shift key
+        if (Screen.hasShiftDown()) {
+            tooltip.add(Component.literal(""));
+            tooltip.add(Component.literal("Default Mode:").withStyle(ChatFormatting.LIGHT_PURPLE));
+            tooltip.add(Component.literal("Right-click to open multiblock menu").withStyle(ChatFormatting.GRAY));
+            tooltip.add(Component.literal(""));
+
+            tooltip.add(Component.literal("Projection Mode:").withStyle(ChatFormatting.LIGHT_PURPLE));
+            tooltip.add(Component.literal("Right-click to rotate 90 degrees").withStyle(ChatFormatting.GRAY));
+            tooltip.add(Component.literal("Left-click to place projection").withStyle(ChatFormatting.GRAY));
+            tooltip.add(Component.literal(""));
+
+            tooltip.add(Component.literal("Build Mode:").withStyle(ChatFormatting.LIGHT_PURPLE));
+            tooltip.add(Component.literal("Build blocks to match projection").withStyle(ChatFormatting.GRAY));
+            tooltip.add(Component.literal("Right-click with projector in hand to cancel").withStyle(ChatFormatting.GRAY));
+            tooltip.add(Component.literal(""));
+
+            tooltip.add(Component.literal("Creative Mode:").withStyle(ChatFormatting.LIGHT_PURPLE));
+            tooltip.add(Component.literal("Sneak + Left-click for autobuild in Projection Mode").withStyle(ChatFormatting.GRAY));
+        } else {
+            tooltip.add(Component.literal("Hold Shift for instructions").withStyle(ChatFormatting.DARK_GRAY));
+        }
     }
     
     @Override

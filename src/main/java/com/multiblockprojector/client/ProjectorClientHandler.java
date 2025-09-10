@@ -4,6 +4,7 @@ import com.multiblockprojector.UniversalProjector;
 import com.multiblockprojector.api.UniversalMultiblockHandler;
 import com.multiblockprojector.client.BlockValidationManager;
 import com.multiblockprojector.common.items.ProjectorItem;
+import com.multiblockprojector.common.network.MessageAutoBuild;
 import com.multiblockprojector.common.projector.MultiblockProjection;
 import com.multiblockprojector.common.projector.Settings;
 import net.minecraft.client.Minecraft;
@@ -99,9 +100,22 @@ public class ProjectorClientHandler {
         if (settings.getMode() == Settings.Mode.PROJECTION && settings.getMultiblock() != null) {
             if (event.getAction() == 1) { // Mouse button press
                 if (event.getButton() == 0) { // Left click
-                    // Left Click: Place projection and enter building mode
                     if (lastAimPos != null) {
-                        placeProjection(player, settings, held, lastAimPos);
+                        if (player.isShiftKeyDown()) {
+                            // Sneak + Left Click: Auto-build (creative mode only)
+                            if (player.isCreative()) {
+                                autoBuildProjection(player, settings, held, lastAimPos);
+                            } else {
+                                player.displayClientMessage(
+                                    Component.literal("Auto-build only works in creative mode!")
+                                        .withStyle(net.minecraft.ChatFormatting.RED), 
+                                    true
+                                );
+                            }
+                        } else {
+                            // Left Click: Place projection and enter building mode
+                            placeProjection(player, settings, held, lastAimPos);
+                        }
                         event.setCanceled(true);
                     }
                 } else if (event.getButton() == 1 && !player.isShiftKeyDown()) { // Right click (not sneak)
@@ -338,6 +352,20 @@ public class ProjectorClientHandler {
                     }
                 }
             }
+        }
+    }
+    
+    private static void autoBuildProjection(Player player, Settings settings, ItemStack held, BlockPos pos) {
+        // Swing the projector for visual feedback
+        player.swing(InteractionHand.MAIN_HAND, true);
+        
+        // Send network message to server to perform auto-build
+        MessageAutoBuild.sendToServer(pos, InteractionHand.MAIN_HAND);
+        
+        // Clear the aim projection immediately (server will handle settings changes)
+        if (lastAimPos != null) {
+            ProjectionManager.removeProjection(lastAimPos);
+            lastAimPos = null;
         }
     }
 }

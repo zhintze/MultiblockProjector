@@ -94,3 +94,11 @@ The mod uses reflection-based adapters to integrate with other mods without comp
 - The projection system is based on Immersive Petroleum's implementation but updated for universal compatibility
 - All mod integrations use reflection to avoid hard dependencies - mods are detected at runtime
 - Test multiblocks are automatically registered if no real multiblocks are found for development purposes
+
+## Implementation Guidelines
+
+**CRITICAL: Always follow the 95% confidence rule from global CLAUDE.md**
+- Do NOT start implementing features until you have 95% confidence in requirements
+- Ask clarifying questions about behavior, edge cases, and user expectations
+- Understand the full scope before making any code changes
+- Better to ask too many questions than implement the wrong thing

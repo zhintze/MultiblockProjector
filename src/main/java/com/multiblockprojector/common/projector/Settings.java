@@ -31,6 +31,7 @@ public class Settings {
     public static final String KEY_PLACED = "placed";
     public static final String KEY_ROTATION = "rotation";
     public static final String KEY_POSITION = "pos";
+    public static final String KEY_AUTO_BUILD = "autoBuild";
     
     private Mode mode;
     private Rotation rotation;

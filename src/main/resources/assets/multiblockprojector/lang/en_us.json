@@ -1,10 +1,12 @@
 {
   "item.multiblockprojector.projector": "Multiblock Projector",
-  "item.multiblockprojector.projector.specific": "Multiblock Projector (%s)",
+  "item.multiblockprojector.projector.selecting": "Multiblock Projector (Selecting)",
+  "item.multiblockprojector.projector.projection_mode": "Multiblock Projector (Projecting)",
+  "item.multiblockprojector.projector.building_mode": "Multiblock Projector (Building)",
   
   "itemGroup.multiblockprojector.main": "Multiblock Projector",
   
-  "desc.multiblockprojector.info.projector.build0": "Projects multiblock structures from any mod",
+  "desc.multiblockprojector.info.projector.build0": "Creates projections of multiblock structures",
   "desc.multiblockprojector.info.projector.build1": "Selected: %s",
   "desc.multiblockprojector.info.projector.mod": "From: %s",
   "desc.multiblockprojector.info.projector.noMultiblock": "No multiblock selected - Right click to choose",
