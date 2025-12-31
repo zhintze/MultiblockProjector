@@ -37,6 +37,7 @@ public class ProjectorScreen extends Screen {
     static {
         MOD_TABS.put("immersiveengineering", "Immersive Engineering");
         MOD_TABS.put("mekanism", "Mekanism");
+        MOD_TABS.put("bloodmagic", "Blood Magic");
     }
 
     // Track which mods have multiblocks

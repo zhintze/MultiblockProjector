@@ -3,6 +3,8 @@ package com.multiblockprojector.client.render;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 import com.multiblockprojector.UniversalProjector;
+import com.multiblockprojector.api.ICyclingBlockMultiblock;
+import com.multiblockprojector.api.IUniversalMultiblock;
 import com.multiblockprojector.client.ProjectionManager;
 import com.multiblockprojector.common.projector.MultiblockProjection;
 import net.minecraft.client.Camera;
@@ -35,9 +37,14 @@ import java.util.Map;
  */
 @EventBusSubscriber(modid = UniversalProjector.MODID, value = net.neoforged.api.distmarker.Dist.CLIENT)
 public class ProjectionRenderer {
-    
+
     private static final float GHOST_ALPHA = 0.4f;
     private static final int GHOST_LIGHT = 0xF000F0; // Full brightness
+
+    // Cycling block support (for Blood Magic runes etc.)
+    private static final long CYCLE_INTERVAL_MS = 1000; // 1 second per rune
+    private static long lastCycleTime = -1;
+    private static int cycleIndex = 0;
     
     @SubscribeEvent
     public static void onRenderLevel(RenderLevelStageEvent event) {
@@ -53,7 +60,16 @@ public class ProjectionRenderer {
         Camera camera = event.getCamera();
         PoseStack poseStack = event.getPoseStack();
         MultiBufferSource.BufferSource bufferSource = mc.renderBuffers().bufferSource();
-        
+
+        // Update cycling timer for cycling blocks (Blood Magic runes etc.)
+        long currentTime = System.currentTimeMillis();
+        if (lastCycleTime < 0) {
+            lastCycleTime = currentTime;
+        } else if (currentTime - lastCycleTime >= CYCLE_INTERVAL_MS) {
+            cycleIndex++;
+            lastCycleTime = currentTime;
+        }
+
         // Clean up distant projections
         ProjectionManager.cleanupDistantProjections(mc.level, mc.player.blockPosition(), 64.0);
         
@@ -68,20 +84,38 @@ public class ProjectionRenderer {
         bufferSource.endBatch();
     }
     
-    private static void renderProjection(PoseStack poseStack, MultiBufferSource bufferSource, Camera camera, 
+    private static void renderProjection(PoseStack poseStack, MultiBufferSource bufferSource, Camera camera,
                                        Level level, BlockPos center, MultiblockProjection projection) {
-        
+
         Vec3 cameraPos = camera.getPosition();
         BlockRenderDispatcher blockRenderer = Minecraft.getInstance().getBlockRenderer();
-        
+
         // Use a custom translucent render type for ghost blocks
         VertexConsumer buffer = bufferSource.getBuffer(RenderType.translucent());
-        
+
+        // Check if this multiblock supports cycling blocks
+        IUniversalMultiblock multiblock = projection.getMultiblock();
+        ICyclingBlockMultiblock cyclingMultiblock = null;
+        if (multiblock instanceof ICyclingBlockMultiblock cycling) {
+            cyclingMultiblock = cycling;
+        }
+        final ICyclingBlockMultiblock finalCyclingMultiblock = cyclingMultiblock;
+
         // Process each layer of the projection
         for (int layer = 0; layer < projection.getLayerCount(); layer++) {
             projection.process(layer, info -> {
                 BlockPos worldPos = center.offset(info.tPos);
                 BlockState ghostState = info.getModifiedState(level, worldPos);
+
+                // Check if this position should cycle through multiple block types
+                BlockPos structurePos = info.tBlockInfo.pos();
+                if (finalCyclingMultiblock != null && finalCyclingMultiblock.hasCyclingBlocks(structurePos)) {
+                    List<BlockState> acceptableBlocks = finalCyclingMultiblock.getAcceptableBlocks(structurePos);
+                    if (!acceptableBlocks.isEmpty()) {
+                        int idx = cycleIndex % acceptableBlocks.size();
+                        ghostState = acceptableBlocks.get(idx);
+                    }
+                }
                 
                 // Don't render air blocks
                 if (ghostState.isAir()) {

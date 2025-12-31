@@ -94,6 +94,13 @@ repositories {
             includeGroup 'curse.maven'
         }
     }
+    maven {
+        name = 'Patchouli Maven'
+        url = 'https://maven.blamejared.com'
+        content {
+            includeGroup 'vazkii.patchouli'
+        }
+    }
     flatDir {
         dirs "libs"
     }
@@ -110,6 +117,10 @@ dependencies {
     implementation files('libs/MekanismAdditions-1.21.1-10.7.14.homebaked.jar')
     implementation files('libs/MekanismGenerators-1.21.1-10.7.14.homebaked.jar')
     implementation files('libs/MekanismTools-1.21.1-10.7.14.homebaked.jar')
+    implementation("vazkii.patchouli:Patchouli:${patchouli_version}") // TODO change back to compile/runtime once SparseMB book rendering works properly
+
+    // Blood Magic from libs folder
+    implementation files('libs/bloodmagic-3.4.0-46-alpha.jar')
 
 
     // Create - using compileOnly to avoid build issues when JARs are not available

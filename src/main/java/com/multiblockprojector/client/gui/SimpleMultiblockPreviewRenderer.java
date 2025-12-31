@@ -3,6 +3,7 @@ package com.multiblockprojector.client.gui;
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.math.Transformation;
+import com.multiblockprojector.api.ICyclingBlockMultiblock;
 import com.multiblockprojector.api.IUniversalMultiblock;
 import com.multiblockprojector.api.IVariableSizeMultiblock;
 import net.minecraft.client.Minecraft;
@@ -35,6 +36,11 @@ public class SimpleMultiblockPreviewRenderer {
     private int blockIndex;
     private int maxBlockIndex;
     private final ClientLevel level;
+
+    // Cycling block support (for Blood Magic runes etc.)
+    private static final long CYCLE_INTERVAL_MS = 1000; // 1 second per rune
+    private long lastCycleTime = -1;
+    private int cycleIndex = 0;
     
     public SimpleMultiblockPreviewRenderer() {
         this.level = Minecraft.getInstance().level;
@@ -155,28 +161,53 @@ public class SimpleMultiblockPreviewRenderer {
     private void renderMultiblock(GuiGraphics graphics, PoseStack poseStack) {
         BlockRenderDispatcher blockRenderer = Minecraft.getInstance().getBlockRenderer();
         MultiBufferSource.BufferSource buffers = graphics.bufferSource();
-        
+
+        // Update cycling timer
+        long currentTime = System.currentTimeMillis();
+        if (lastCycleTime < 0) {
+            lastCycleTime = currentTime;
+        } else if (currentTime - lastCycleTime >= CYCLE_INTERVAL_MS) {
+            cycleIndex++;
+            lastCycleTime = currentTime;
+        }
+
+        // Check if this multiblock supports cycling blocks
+        ICyclingBlockMultiblock cyclingMultiblock = null;
+        if (multiblock instanceof ICyclingBlockMultiblock cycling) {
+            cyclingMultiblock = cycling;
+        }
+
         for (int i = 0; i < Math.min(blockIndex, structure.size()); i++) {
             StructureBlockInfo blockInfo = structure.get(i);
             BlockPos pos = blockInfo.pos();
             BlockState state = blockInfo.state();
-            
+
+            // Check if this position should cycle through multiple block types
+            if (cyclingMultiblock != null && cyclingMultiblock.hasCyclingBlocks(pos)) {
+                List<BlockState> acceptableBlocks = cyclingMultiblock.getAcceptableBlocks(pos);
+                if (!acceptableBlocks.isEmpty()) {
+                    // Cycle through the acceptable blocks
+                    int idx = cycleIndex % acceptableBlocks.size();
+                    state = acceptableBlocks.get(idx);
+                }
+            }
+
             if (!state.isAir()) {
                 poseStack.pushPose();
                 poseStack.translate(pos.getX(), pos.getY(), pos.getZ());
-                
+
                 int overlay = OverlayTexture.NO_OVERLAY;
                 ModelData modelData = ModelData.EMPTY;
-                
+
                 BakedModel model = blockRenderer.getBlockModel(state);
-                
+
                 try {
-                    blockRenderer.renderSingleBlock(state, poseStack, buffers, 
+                    blockRenderer.renderSingleBlock(state, poseStack, buffers,
                         0xF000F0, overlay, modelData, null);
                 } catch (Exception e) {
                     // Silently ignore render errors for individual blocks
                 }
-                
+
                 poseStack.popPose();
             }
         }

@@ -1,5 +1,7 @@
 package com.multiblockprojector.common.network;
 
+import com.multiblockprojector.api.ICyclingBlockMultiblock;
+import com.multiblockprojector.api.IUniversalMultiblock;
 import com.multiblockprojector.api.UniversalMultiblockHandler;
 import com.multiblockprojector.common.items.ProjectorItem;
 import com.multiblockprojector.common.projector.MultiblockProjection;
@@ -77,19 +79,36 @@ public class MessageAutoBuild implements CustomPacketPayload {
     
     private static void performAutoBuild(Player player, Settings settings, ItemStack held, BlockPos pos) {
         // Create the projection to get block positions and states
-        var size = MultiblockProjection.getSizeFromSettings(settings.getMultiblock(), settings);
-        MultiblockProjection projection = new MultiblockProjection(player.level(), settings.getMultiblock(), size);
+        IUniversalMultiblock multiblock = settings.getMultiblock();
+        var size = MultiblockProjection.getSizeFromSettings(multiblock, settings);
+        MultiblockProjection projection = new MultiblockProjection(player.level(), multiblock, size);
         projection.setRotation(settings.getRotation());
         projection.setFlip(settings.isMirrored());
-        
+
+        // Check if this multiblock supports cycling blocks
+        ICyclingBlockMultiblock cyclingMultiblock = null;
+        if (multiblock instanceof ICyclingBlockMultiblock cycling) {
+            cyclingMultiblock = cycling;
+        }
+        final ICyclingBlockMultiblock finalCyclingMultiblock = cyclingMultiblock;
+
         Level level = player.level();
         List<BlockPos> failedPlacements = new ArrayList<>();
         final int[] blocksPlaced = {0};
-        
+
         // Process all layers and place blocks
         projection.processAll((layer, info) -> {
             BlockPos worldPos = pos.offset(info.tPos);
             BlockState targetState = info.getModifiedState(level, worldPos);
+
+            // For cycling positions (like Blood Magic runes), use the default block (blank rune)
+            BlockPos structurePos = info.tBlockInfo.pos();
+            if (finalCyclingMultiblock != null && finalCyclingMultiblock.hasCyclingBlocks(structurePos)) {
+                BlockState defaultBlock = finalCyclingMultiblock.getDefaultBlock(structurePos);
+                if (defaultBlock != null) {
+                    targetState = defaultBlock;
+                }
+            }
             
             // Check if we can place the block here
             if (level.isInWorldBounds(worldPos) && level.getWorldBorder().isWithinBounds(worldPos)) {

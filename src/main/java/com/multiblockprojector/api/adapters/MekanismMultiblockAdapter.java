@@ -1111,15 +1111,10 @@ public class MekanismMultiblockAdapter {
             List<StructureBlockInfo> blocks = new ArrayList<>();
 
             // Fusion Reactor is a fixed 5-layer structure
+            // Made of: 75 Frame, 2 Port, 1 Controller, 8 Glass, 1 Laser Focus Matrix
             // Legend: F=Frame, P=Port, C=Controller, L=Laser Focus, G=Glass, .=air
 
-            // Layer 0 (bottom) - Solid plus/star shape of Frame
-            // Pattern:
-            //   . . F . .
-            //   . F F F .
-            //   F F F F F
-            //   . F F F .
-            //   . . F . .
+            // Layer 0 (bottom) - Solid plus shape of Frame (13 blocks)
             int[][] layer0 = {
                 {0, 0, 1, 0, 0},
                 {0, 1, 1, 1, 0},
@@ -1129,48 +1124,45 @@ public class MekanismMultiblockAdapter {
             };
             addFusionLayerSimple(blocks, 0, layer0, fusionFrameBlock);
 
-            // Layer 1 - Square perimeter WITHOUT corners, centers can be ports
+            // Layer 1 - Hollow square without corners, ALL Frame (12 blocks)
             // Pattern:
-            //   . F P F .
+            //   . F F F .
             //   F . . . F
-            //   P . . . P
             //   F . . . F
-            //   . F P F .
+            //   F . . . F
+            //   . F F F .
             int[][] layer1 = {
-                {0, 1, 2, 1, 0},
+                {0, 1, 1, 1, 0},
                 {1, 0, 0, 0, 1},
-                {2, 0, 0, 0, 2},
                 {1, 0, 0, 0, 1},
-                {0, 1, 2, 1, 0}
+                {1, 0, 0, 0, 1},
+                {0, 1, 1, 1, 0}
             };
-            addFusionLayerWithTypes(blocks, 1, layer1);
+            addFusionLayerSimple(blocks, 1, layer1, fusionFrameBlock);
 
-            // Layer 2 (middle) - Full square perimeter, corners=Frame, non-corners can be Port/Glass/Laser
-            // Pattern:
-            //   F G P G F
+            // Layer 2 (middle) - Full square perimeter
+            // Ports on left/right (across from each other)
+            // Laser at front center with glass on all sides
+            // Back has T-shape glass to match front
+            // Pattern (looking from above, front=south/z=4):
+            //   F G G G F   <- Back (north), T-shape glass
             //   G . . . G
-            //   P . . . L  (Laser Focus on one side for ignition)
+            //   P . . . P   <- Ports on left/right sides
             //   G . . . G
-            //   F G P G F
+            //   F G L G F   <- Front (south), Laser in middle
             int[][] layer2 = {
-                {1, 3, 2, 3, 1},
+                {1, 3, 3, 3, 1},
                 {3, 0, 0, 0, 3},
-                {2, 0, 0, 0, 4},
+                {2, 0, 0, 0, 2},
                 {3, 0, 0, 0, 3},
-                {1, 3, 2, 3, 1}
+                {1, 3, 4, 3, 1}
             };
             addFusionLayerWithTypes(blocks, 2, layer2);
 
-            // Layer 3 - Same as Layer 1 (square without corners)
-            addFusionLayerWithTypes(blocks, 3, layer1);
+            // Layer 3 - Same as Layer 1, ALL Frame (12 blocks)
+            addFusionLayerSimple(blocks, 3, layer1, fusionFrameBlock);
 
-            // Layer 4 (top) - Solid plus/star shape with Controller in center
-            // Pattern:
-            //   . . F . .
-            //   . F F F .
-            //   F F C F F
-            //   . F F F .
-            //   . . F . .
+            // Layer 4 (top) - Solid plus shape with Controller in center (12 Frame + 1 Controller)
             int[][] layer4 = {
                 {0, 0, 1, 0, 0},
                 {0, 1, 1, 1, 0},
